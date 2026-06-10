@@ -1,3 +1,3 @@
 module github.com/chrissbo/ledger-service
 
-go 1.24
+go 1.25
