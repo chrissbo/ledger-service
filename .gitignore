@@ -1,0 +1,17 @@
+# golangci-lint pulls the centrally pinned config in CI; we may copy it
+# locally for editor preview but never check it in.
+.golangci.yml
+.golangci.yaml
+
+# Build outputs
+/bin/
+/dist/
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
