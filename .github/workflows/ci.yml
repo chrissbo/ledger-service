@@ -1,0 +1,39 @@
+# Per-service CI entry point. Calls the reusable workflows in
+# chrissbo/platform-golden-paths. We pin to @main during simulation
+# bootstrap; Phase 2 will move to a SHA pin and turn on Renovate so
+# updates surface as PRs (the supply-chain practice in
+# research/cicd-toolchain/01-source-and-build.md).
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  merge_group:
+
+# Cancel in-flight runs on the same ref when a new commit lands. This is the
+# concurrency pattern from research/cicd-toolchain/pipeline-architecture.md.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fast-check:
+    # Pipeline 1: <3 min budget. Runs on every event.
+    uses: chrissbo/platform-golden-paths/.github/workflows/ci-fast-check.yml@main
+    with:
+      go-version: "1.25.11"
+
+  pr-gate:
+    # Pipeline 2: <8 min budget. Runs on PR + merge queue.
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
+    uses: chrissbo/platform-golden-paths/.github/workflows/ci-pr-gate.yml@main
+    with:
+      go-version: "1.25.11"
+      run-iac: false   # no terraform/k8s manifests in this repo yet
+      run-pact: false  # contract tests added in Phase 2
