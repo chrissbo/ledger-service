@@ -42,8 +42,10 @@ jobs:
       run-pact: false  # contract tests added in Phase 2
 
   ai-review:
-    # Phase 1.5c: Mode 2 review bot. Skips when ANTHROPIC_API_KEY is unset,
-    # so this is safe to leave on permanently.
+    # Phase 1.5c: Mode 2 review bot. The reusable workflow itself decides
+    # whether to actually run PR-Agent based on ANTHROPIC_API_KEY presence —
+    # the 'secrets' context is not available in caller-side if: expressions,
+    # so we only gate on the event type here.
     if: ${{ github.event_name == 'pull_request' }}
     uses: chrissbo/platform-golden-paths/.github/workflows/ci-pr-review.yml@main
     secrets: inherit
