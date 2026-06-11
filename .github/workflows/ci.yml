@@ -12,6 +12,9 @@ on:
   pull_request:
     branches: [main]
   merge_group:
+  workflow_dispatch:
+    # Manual trigger — useful for re-running the post-merge supply-chain
+    # job against an arbitrary commit without faking a merge.
   schedule:
     # Daily at 04:17 UTC. Off-peak; minute is non-zero on purpose so we
     # don't pile onto :00 with everyone else.
@@ -63,3 +66,46 @@ jobs:
     uses: chrissbo/platform-golden-paths/.github/workflows/ci-monitor.yml@main
     with:
       go-version: "1.25.11"
+
+  post-merge:
+    # Pipeline 3 (Post-Merge supply chain): build + push to GHCR, generate
+    # SBOMs, sign with Cosign keyless, attest. Runs on push-to-main and
+    # workflow_dispatch (manual re-run, e.g. to re-attest an existing image).
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+      packages: write          # ghcr push
+      id-token: write          # Sigstore keyless
+      attestations: write
+      security-events: write
+    uses: chrissbo/platform-golden-paths/.github/workflows/ci-post-merge.yml@main
+    with:
+      go-version: "1.25.11"
+      image-name: ledger-service
+      ko-main-package: ./cmd/ledger-service
+      # Dependency-Track is local-only in the sim; toggle on by setting
+      # DT_URL / DT_KEY in the local stack and patching this with values
+      # exposed via a (cloudflared / tailscale) tunnel during a demo run.
+      dependency-track-url: ""
+      dependency-track-project-name: ledger-service
+    secrets: inherit
+
+  slsa-provenance:
+    # SLSA L3 build provenance via the official trusted reusable workflow.
+    # The workflow runs in an isolated GITHUB_TOKEN context where the
+    # service repo cannot tamper with the signer — that's the L3 property.
+    # We call it AFTER post-merge so the digest is known.
+    needs: [post-merge]
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      id-token: write          # Sigstore keyless for the provenance attestation
+      packages: write          # attach attestation to the GHCR image
+      contents: read
+      actions: read            # the generator reads workflow metadata
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.0.0
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/ledger-service
+      digest: ${{ needs.post-merge.outputs.digest }}
+      registry-username: ${{ github.actor }}
+    secrets:
+      registry-password: ${{ secrets.GITHUB_TOKEN }}
