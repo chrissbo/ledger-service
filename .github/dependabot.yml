@@ -1,0 +1,24 @@
+# Dependabot config for ledger-service.
+# Opens PRs that bump Go modules and pinned GitHub Actions.
+# Phase 1.5 of the local pipeline simulation — see
+# research/cicd-toolchain/local-simulation-feasibility.md (parent thought-work).
+
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "go"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"

@@ -21,6 +21,9 @@ concurrency:
 
 permissions:
   contents: read
+  security-events: write   # SARIF upload to Security tab from reusable workflows
+  pull-requests: write     # PR-Agent posts review comments (Phase 1.5c)
+  issues: write            # PR-Agent comment plumbing
 
 jobs:
   fast-check:
@@ -37,3 +40,12 @@ jobs:
       go-version: "1.25.11"
       run-iac: false   # no terraform/k8s manifests in this repo yet
       run-pact: false  # contract tests added in Phase 2
+
+  ai-review:
+    # Phase 1.5c: Mode 2 review bot. The reusable workflow itself decides
+    # whether to actually run PR-Agent based on ANTHROPIC_API_KEY presence —
+    # the 'secrets' context is not available in caller-side if: expressions,
+    # so we only gate on the event type here.
+    if: ${{ github.event_name == 'pull_request' }}
+    uses: chrissbo/platform-golden-paths/.github/workflows/ci-pr-review.yml@main
+    secrets: inherit
