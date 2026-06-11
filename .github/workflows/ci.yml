@@ -22,7 +22,8 @@ concurrency:
 permissions:
   contents: read
   security-events: write   # SARIF upload to Security tab from reusable workflows
-  pull-requests: read      # PR-Agent posts comments (Phase 1.5c)
+  pull-requests: write     # PR-Agent posts review comments (Phase 1.5c)
+  issues: write            # PR-Agent comment plumbing
 
 jobs:
   fast-check:
