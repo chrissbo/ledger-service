@@ -1,0 +1,73 @@
+# Layer A auto-merge — minor + patch dependency bumps from Dependabot.
+#
+# What this does:
+#   1. Fires only on Dependabot PRs (gated by github.actor).
+#   2. Reads the structured update metadata via dependabot/fetch-metadata.
+#   3. If every update in the PR is semver-minor or semver-patch, enables
+#      GitHub's native auto-merge with the squash strategy. Auto-merge waits
+#      for required status checks to pass before actually merging — that's
+#      what makes Layer A safe.
+#   4. Major bumps (and anything else) are left for human review.
+#
+# Notes on permissions:
+#   - We use 'pull_request_target' because Dependabot PRs otherwise run with
+#     read-only GITHUB_TOKEN; pull_request_target runs in the base-branch
+#     context which has the elevated permissions auto-merge needs.
+#   - Important security caveat: pull_request_target is dangerous if the
+#     workflow checks out and runs untrusted PR code. We do NOT check out
+#     the PR; we only call the GitHub API. That's safe.
+#
+# Reference: research/cicd-toolchain/ai-assisted-developer-workflows.md
+# §"PR Layer A — Built-in auto-merge with grouping".
+
+name: dependabot-auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: write       # required for auto-merge on the base branch
+  pull-requests: write  # required to enable auto-merge on the PR
+
+jobs:
+  auto-merge:
+    name: auto-merge minor/patch
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    timeout-minutes: 3
+    steps:
+      - name: fetch dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2.4.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: enable auto-merge for minor/patch
+        # 'update-type' reflects the highest update type in the PR — for a
+        # grouped PR with mixed patch and minor bumps it is 'semver-minor',
+        # which is what we want.
+        if: >-
+          ${{ steps.meta.outputs.update-type == 'version-update:semver-minor'
+             || steps.meta.outputs.update-type == 'version-update:semver-patch' }}
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh pr merge --auto --squash "$PR_URL"
+
+      - name: comment if not auto-mergeable
+        # Major bumps and other update types: leave a one-line note so
+        # reviewers know why the bot did not click auto-merge. Skipping
+        # this when the merge already succeeded keeps PR threads clean.
+        if: >-
+          ${{ steps.meta.outputs.update-type != 'version-update:semver-minor'
+             && steps.meta.outputs.update-type != 'version-update:semver-patch' }}
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh pr comment "$PR_URL" --body "Layer A auto-merge skipped — update type \`${UPDATE_TYPE}\` requires human review."

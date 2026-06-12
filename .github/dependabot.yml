@@ -9,6 +9,13 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Group minor + patch into one PR per week. Layer A auto-merges;
+    # majors stay separate for human review.
+    groups:
+      go-modules-minor:
+        update-types:
+          - "minor"
+          - "patch"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -18,6 +25,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      ci-actions-minor:
+        update-types:
+          - "minor"
+          - "patch"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
