@@ -12,19 +12,28 @@ import (
 	"github.com/chrissbo/ledger-service/internal/ledger"
 )
 
+// Version is set at build time via -ldflags.
+var Version = "dev"
+
 // New returns an http.Handler that exposes the given ledger.
 func New(l *ledger.Ledger) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthz)
-	mux.HandleFunc("GET /balance/{account}", balance(l))
-	mux.HandleFunc("POST /deposits", deposit(l))
-	mux.HandleFunc("POST /transfers", transfer(l))
+	mux.HandleFunc("GET /version", version)
+	mux.Handle("GET /metrics", MetricsHandler())
+	mux.HandleFunc("GET /balance/{account}", instrumentHandler("/balance", balance(l)))
+	mux.HandleFunc("POST /deposits", instrumentHandler("/deposits", deposit(l)))
+	mux.HandleFunc("POST /transfers", instrumentHandler("/transfers", transfer(l)))
 	return mux
 }
 
 func healthz(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func version(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"version": Version})
 }
 
 func balance(l *ledger.Ledger) http.HandlerFunc {
