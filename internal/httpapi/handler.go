@@ -20,9 +20,10 @@ func New(l *ledger.Ledger) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthz)
 	mux.HandleFunc("GET /version", version)
-	mux.HandleFunc("GET /balance/{account}", balance(l))
-	mux.HandleFunc("POST /deposits", deposit(l))
-	mux.HandleFunc("POST /transfers", transfer(l))
+	mux.Handle("GET /metrics", MetricsHandler())
+	mux.HandleFunc("GET /balance/{account}", instrumentHandler("/balance", balance(l)))
+	mux.HandleFunc("POST /deposits", instrumentHandler("/deposits", deposit(l)))
+	mux.HandleFunc("POST /transfers", instrumentHandler("/transfers", transfer(l)))
 	return mux
 }
 
