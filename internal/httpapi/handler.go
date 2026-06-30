@@ -13,7 +13,7 @@ import (
 )
 
 // Version is set at build time via -ldflags.
-var Version = "1.1.0"
+var Version = "1.2.0"
 
 // New returns an http.Handler that exposes the given ledger.
 func New(l *ledger.Ledger) http.Handler {
