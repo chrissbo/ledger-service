@@ -10,14 +10,10 @@ This repo is the **service** in a three-repo simulation:
 
 ## What this simulates
 
-Pipelines 1–4 of the architecture in
-[`research/cicd-toolchain/pipeline-architecture.md`](https://github.com/chrissbo/upvest-platform/blob/main/research/cicd-toolchain/pipeline-architecture.md)
+Pipelines 1–4 of a software-delivery pipeline architecture
 end-to-end on free, open tooling: Cosign keyless signing, SLSA L3 provenance,
 Pact contracts, OPA verdict, Kyverno admission, Argo CD + Argo Rollouts in a
 local kind cluster. No cloud, no paid SaaS.
-
-Plan and feasibility analysis:
-[`research/cicd-toolchain/local-simulation-feasibility.md`](https://github.com/chrissbo/upvest-platform/blob/main/research/cicd-toolchain/local-simulation-feasibility.md).
 
 ## Status
 
